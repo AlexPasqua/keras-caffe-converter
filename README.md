@@ -1,2 +1,2 @@
-# INDE_models_conversion
-Conversione of NNs from Caffe to Keras
+# INDE_models_optimization
+Optimization of NNs models
