@@ -76,25 +76,40 @@ double printKeypoints(const std::shared_ptr<std::vector<std::shared_ptr<op::Datu
             const auto& poseKPs = datumsPtr->at(0)->poseKeypoints;
             const auto& faceKPs = datumsPtr->at(0)->faceKeypoints;
             const auto& handsKPs = datumsPtr->at(0)->handKeypoints;
+            const int& imWidth = datumsPtr->at(0)->cvInputData.cols();
+            const int& imHeight = datumsPtr->at(0)->cvInputData.rows();
 
             /* assuming there's only one person (as we need) */
 
             for (int bodyPart = 0; bodyPart < poseKPs.getSize(1); bodyPart++) {
+                bool foundOutOfBoundaries = false;
                 valueToPrint += std::to_string(frameNumber) + ";";
                 valueToPrint += bodyPartsMap.at(bodyPart) + ";";
 
                 const auto size = poseKPs.getSize(2);
                 for (int xyscore = 0; xyscore < size; xyscore++) {
+                    /* Check if the current point's coordinates are withing the image boundaries.
+                    This happens for a couple of KPs and it creates problem with INDE_performance_test */
+                    if (poseKPs[ {0, bodyPart, 0} ] > imWidth || poseKPs[ {0, bodyPart, 1} ] > imHeight ||
+                        poseKPs[ {0, bodyPart, 0} ] < 0 || poseKPs[ {0, bodyPart, 1} ] < 0)
+                    {
+                        foundOutOfBoundaries = true;
+                        break;
+                    }
+
                     valueToPrint += std::to_string(poseKPs[ {0, bodyPart, xyscore} ]) + ";";
 
+                    // if foundOutOfBoundaries, we won't reach this if statement
                     if (xyscore == size - 1 && poseKPs[{0, bodyPart, xyscore}] >= confThresh) {
                         avgFrameConfidence += poseKPs[{0, bodyPart, xyscore}];
                         totSize++;
                     }
                 }
-                valueToPrint = valueToPrint.substr(0, valueToPrint.size() - 1);
-                //op::opLog(valueToPrint, op::Priority::High);
-                *outcsv << valueToPrint << '\n';
+                if (! foundOutOfBoundaries) {
+                    valueToPrint = valueToPrint.substr(0, valueToPrint.size() - 1); // delete last semicolon (needed for INDE_performance_test)
+                    //op::opLog(valueToPrint, op::Priority::High);
+                    *outcsv << valueToPrint << '\n';
+                }
                 valueToPrint = "";
             }
 
