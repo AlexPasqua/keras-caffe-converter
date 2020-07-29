@@ -47,7 +47,7 @@ bool display(const std::shared_ptr<std::vector<std::shared_ptr<op::Datum>>>& dat
 }
 
 
-double printKeypoints(const std::shared_ptr<std::vector<std::shared_ptr<op::Datum>>>& datumsPtr, unsigned frameNumber, std::ofstream *outcsv)
+double printKeypoints(const std::shared_ptr<std::vector<std::shared_ptr<op::Datum>>>& datumsPtr, unsigned frameNumber, std::ofstream *outcsv, double *avgConfIndexNose)
 {
     double avgFrameConfidence = 0.0f;
 
@@ -68,11 +68,11 @@ double printKeypoints(const std::shared_ptr<std::vector<std::shared_ptr<op::Datu
             */
             const std::map<unsigned int, std::string>& bodyPartsMap = op::getPoseBodyPartMapping(op::PoseModel(14));
             // 14 is the index corresponding to POSE_BODY_135_BODY_PARTS: a map with all the 135 body parts
-            // Instad of passing the model to getPoseBodyPartMapping, I force the function to returned the complete map
+            // Instad of passing the model to getPoseBodyPartMapping, I force the function to returne the complete map
 
             std::string valueToPrint;
             double totSize = 0.0f;
-            const double confThresh = 0.40f;     // confidence threshold
+            const double confThresh = 0.30f;     // confidence threshold
             const auto& poseKPs = datumsPtr->at(0)->poseKeypoints;
             const auto& faceKPs = datumsPtr->at(0)->faceKeypoints;
             const auto& handsKPs = datumsPtr->at(0)->handKeypoints;
@@ -125,6 +125,8 @@ double printKeypoints(const std::shared_ptr<std::vector<std::shared_ptr<op::Datu
                         if (xyscore == size - 1 && faceKPs[{0, facePart, xyscore}] >= confThresh) {
                             avgFrameConfidence += faceKPs[{0, facePart, xyscore}];
                             totSize++;
+                            if (facePart == 30) // 30 is the number of NoseUpper3, the nose tip
+                                *avgConfIndexNose += faceKPs[{0, facePart, xyscore}];
                         }
                     }
                     valueToPrint = valueToPrint.substr(0, valueToPrint.size() - 1);
@@ -147,6 +149,9 @@ double printKeypoints(const std::shared_ptr<std::vector<std::shared_ptr<op::Datu
                             if (xyscore == size - 1 && handsKPs[handNumber][{0, handPart, xyscore}] >= confThresh) {
                                 avgFrameConfidence += handsKPs[handNumber][{0, handPart, xyscore}];
                                 totSize++;
+                                // if we're on the left index finger tip...
+                                if (handNumber == 0 && handPart == 7)
+                                    *avgConfIndexNose += handsKPs[handNumber][{0, handPart, xyscore}];
                             }
                         }
                         valueToPrint = valueToPrint.substr(0, valueToPrint.size() - 1);
@@ -281,7 +286,7 @@ int tutorialApiCpp()
         opWrapper.start();
 
         // create VideoCapture object to read the video
-        cv::VideoCapture videocap("/home/alexp/Scaricati/video_ground_truth.avi");
+        cv::VideoCapture videocap("/home/parco04/OneDrivePARCO/General/Video/Index-Nose Pose Estimation/video0001-0090.avi");
         if (!videocap.isOpened())
             op::opLog("Error opening the video", op::Priority::High);
 
@@ -291,12 +296,13 @@ int tutorialApiCpp()
 
         cv::Mat frame;
         unsigned frameNumber = 0;
-        double avarageFPS = 0.0f;
-        double avarageConfidence = 0.0f;
+        double avgFPS = 0.0f;
+        double avgConf = 0.0f;
+        double avgConfIndexNose = 0.0f; // Avarage frame confidence only for index and nose
 
         // open csv file to save keypoints data
         std::ofstream outcsv;
-        outcsv.open("/home/alexp/INDE_performance_test/extracted_data/mine.csv", std::ios::out | std::ios::trunc);
+        outcsv.open("/home/parco04/pasquali/mine.csv", std::ios::out | std::ios::trunc);
 
         while (1) {
             if (!videocap.read(frame))  // read a frame of the video and put it into "frame"
@@ -309,10 +315,10 @@ int tutorialApiCpp()
             auto datumProcessed = opWrapper.emplaceAndPop(imageToProcess);
 
             duration elabTime = HighResCK::now() - startTime;
-            avarageFPS += elabTime.count();
+            avgFPS += elabTime.count();
 
             if (datumProcessed != nullptr) {
-                avarageConfidence += printKeypoints(datumProcessed, ++frameNumber, &outcsv);
+                avgConf += printKeypoints(datumProcessed, ++frameNumber, &outcsv, &avgConfIndexNose);
                 if (!FLAGS_no_display)
                     display(datumProcessed);
             }
@@ -320,14 +326,16 @@ int tutorialApiCpp()
 
         outcsv.close();
 
-        avarageFPS /= (double) frameNumber;
-        avarageFPS = (double) 1.0 / avarageFPS;
-        avarageConfidence /= (double) frameNumber;
+        avgFPS /= (double) frameNumber;
+        avgFPS = /*(double)*/ 1.0f / avgFPS;
+        avgConf /= (double) frameNumber;
+        avgConfIndexNose /= (double)(2 * frameNumber);  // 2 is the number of body parts included in the measurement
 
         // Measuring total time, avarage FPS and avarage confidence
         op::printTime(opTimer, "OpenPose demo successfully finished. Total time: ", " seconds.", op::Priority::High);
-        op::opLog("Avarage FPS: " + std::to_string(avarageFPS), op::Priority::High);
-        op::opLog("Avarage confidence: " + std::to_string(avarageConfidence), op::Priority::High);
+        op::opLog("Avarage FPS: " + std::to_string(avgFPS), op::Priority::High);
+        op::opLog("Avarage confidence: " + std::to_string(avgConf), op::Priority::High);
+        op::opLog("Avarage confidence for index and nose: " + std::to_string(avgConfIndexNose), op::Priority::High);
 
         // Return
         return 0;
