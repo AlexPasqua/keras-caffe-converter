@@ -9,13 +9,13 @@ import argparse
 
 # Dictionary containing the base strings for each type of known layer
 layers_strings = {
-    'Input': "input = Input(shape=({},{},{}), name='{}')\n",
-    'Convolution': "{} = Conv2D(name='{}', filters={}, kernel_size={}, strides={}, padding='same')({})\n",
-    'ReLU': "{} = ReLU()({})\n",
-    'PReLU': "{} = PReLU(name='{}')({})\n",
-    'Concat': "{} = Concatenate(name='{}')([{}])\n\n",
-    'Pooling': "{} = {}Pooling2D(pool_size={}, strides={}, padding='valid')({})\n",
-    'unknown': "\nUNKNOWN Layer --> line: {}\tname: {}\t type: {}\n\n",
+    'Input': "\tinput = Input(shape=({},{},{}), name='{}')\n",
+    'Convolution': "\t{} = Conv2D(name='{}', filters={}, kernel_size={}, strides={}, padding='same')({})\n",
+    'ReLU': "\t{} = ReLU()({})\n",
+    'PReLU': "\t{} = PReLU(name='{}')({})\n",
+    'Concat': "\t{} = Concatenate(name='{}')([{}])\n\n",
+    'Pooling': "\t{} = {}Pooling2D(pool_size={}, strides={}, padding='valid')({})\n",
+    'unknown': "\t\nUNKNOWN Layer --> line: {}\tname: {}\t type: {}\n\n",
 }
 
 
@@ -69,7 +69,7 @@ def write_layer(layer_data, outfile):
     return layer_data
 
 
-def write_nn_struct_code_keras(argv):
+def write_nn_struct_code_keras(prototxt_path, outfile_path):
     """
     Reads the Caffe model's definition from its prototxt file and writes on the outfile
     the code to generate the same model in Keras.
@@ -98,9 +98,9 @@ def write_nn_struct_code_keras(argv):
     # Read the prototxt
     # Update layer_data
     # Basing on the layer's type, I use (only) the attributes I need of layer_data
-    with open(argv.prototxt, 'r') as prototxt:
+    with open(prototxt_path, 'r') as prototxt:
         lines = prototxt.readlines()
-        with open(argv.outfile, 'w') as outfile:
+        with open(outfile_path, 'a') as outfile:
             offset = 0
             while 'input:' not in lines[offset]:
                 if 'layer {' in lines[offset]: break    # in case there's no input
@@ -154,7 +154,8 @@ def write_nn_struct_code_keras(argv):
                         if default_stride: layer_data['stride'] = 1
 
             # After the for cycle finished...
-            outfile.write(f"keras_model = tf.keras.Model(inputs=input, outputs={layer_data['name']})")
+            outfile.write(f"\tkeras_model = tf.keras.Model(inputs=input, outputs={layer_data['name']})")
+            outfile.write('\n\tkeras_model.summary()')
 
 
 if __name__ == '__main__':
@@ -164,6 +165,5 @@ if __name__ == '__main__':
     )
     parser.add_argument('prototxt', action='store', help="The filename (full path including file extension) of the '.prototxt' file that defines the Caffe model.")
     parser.add_argument('outfile', action='store', help="The filename (full path including file extension) of the file where you want the code to be written in.")
-    parser.add_argument('-sl', '--start_line', type=int, action='store', default=0, help="The line of [outfile] where you want the Keras code to start in.")
     args = parser.parse_args()
-    write_nn_struct_code_keras(args)
+    write_nn_struct_code_keras(args.prototxt, args.outfile)
