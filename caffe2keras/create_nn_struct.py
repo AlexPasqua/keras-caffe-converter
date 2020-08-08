@@ -164,6 +164,6 @@ if __name__ == '__main__':
     )
     parser.add_argument('prototxt', action='store', help="The filename (full path including file extension) of the '.prototxt' file that defines the Caffe model.")
     parser.add_argument('outfile', action='store', help="The filename (full path including file extension) of the file where you want the code to be written in.")
-    parser.add_argument('start_line', type=int, action='store', default=0, help="The line of [outfile] where you want the Keras code to start in.")
+    parser.add_argument('-sl', '--start_line', type=int, action='store', default=0, help="The line of [outfile] where you want the Keras code to start in.")
     args = parser.parse_args()
     write_nn_struct_code_keras(args)

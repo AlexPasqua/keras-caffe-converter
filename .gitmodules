@@ -1,4 +1,4 @@
 [submodule "caffe_weight_converter"]
-	path = caffe_weight_converter
+	path = caffe2keras/caffe_weight_converter
 	url = https://github.com/AlexPasqua/caffe_weight_converter.git
 	branch = master
