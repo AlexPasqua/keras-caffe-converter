@@ -32,7 +32,7 @@ def save_keras_weights(model_path, weights_path):
 
 
 if __name__ == '__main__':
-    pareser= argparse.ArgumentParser(
+    parser = argparse.ArgumentParser(
         description="Reads the Keras network's parameters and create a picke to export"
     )
     parser.add_argument('keras_model', action='store', help="The filename (full path including extension) of the file that contains the Keras model.")

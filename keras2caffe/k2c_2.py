@@ -7,6 +7,7 @@ from caffe import layers as cl, params as cp
 
 import numpy as np
 import pickle
+import argparse
 
 
 def create_caffe_net(prototxt_path, weights_path, caffemodel_path):
@@ -53,11 +54,11 @@ def create_caffe_net(prototxt_path, weights_path, caffemodel_path):
 
 
 if __name__ == '__main__':
-    pareser= argparse.ArgumentParser(
+    parser = argparse.ArgumentParser(
         description="Reads the Keras model's parameters from a previously exported pickle, load them into a Caffe net and saves it"
     )
     parser.add_argument('prototxt', action='store', help="The filename (full path including file extension) of the '.prototxt' file that defines the Caffe model.")
     parser.add_argument('weights_path', action='store', help="The filename (full path WITHOUT extension) of the file that will contain the Keras model's weights.")
     parser.add_argument('caffemodel', action='store', help="The filename (full path WITHOUT extension) of the file where to save the Caffe model")
     args = parser.parse_args()
-    save_keras_weights(args.keras_model, args.weights_path, args.caffemodel)
+    create_caffe_net(args.prototxt, args.weights_path, args.caffemodel)
