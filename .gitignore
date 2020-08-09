@@ -3,3 +3,5 @@
 *.onnx
 *.h5
 *.pkl
+caffe2keras/__pycache__/*
+keras2caffe/__pycache__/*
