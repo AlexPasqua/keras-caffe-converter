@@ -1,3 +1,8 @@
+"""
+It reads the Caffe net's definition from its prototxt, the weights from a pickle file
+and creates a complete caffemodel ready to be deployed
+"""
+
 import tensorflow as tf
 from tensorflow import keras
 from tensorflow.keras.layers import Input, Conv2D, ReLU, MaxPooling2D, PReLU, Concatenate
@@ -11,6 +16,16 @@ import argparse
 
 
 def create_caffe_net(prototxt_path, weights_path, caffemodel_path):
+    """
+    Reads the net's weights from hte pickle (weights_path) and stores them into a dictionary.
+    Then it creates a Caffe Net from its prototxt and puts the weights in the rights places in the net.
+
+    Arguments:
+        prototxt_path: path to the net's prototxt definition file
+        weights_path: path to the pickle file storing the net's weights
+        caffemodel_path: path to the caffemodel file that will be the result of the script
+    """
+
     # Load weights in dictionary form
     with open(weights_path, 'rb') as f:
         weights = pickle.load(f)

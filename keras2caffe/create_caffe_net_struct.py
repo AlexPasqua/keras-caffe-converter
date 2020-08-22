@@ -1,3 +1,8 @@
+"""
+This script goes through the Keras model and creates the prototxt of an equivalent Caffe one
+"""
+
+
 import tensorflow as tf
 from tensorflow import keras
 from tensorflow.keras import models
@@ -10,7 +15,41 @@ import numpy as np
 import argparse
 
 
+def fix_prototxt(prototxt_path):
+    """
+    Delete from prototxt a redundant input layer
+    Arguments:
+        prototxt_path: the path to the prototxt file to fix
+    """
+    with open(prototxt_path, 'r') as f:
+        lines = f.readlines()
+        for i in range(len(lines)):
+            if lines[i] == 'layer {\n':
+                begin_index = i
+
+            if 'type: "Input"' in lines[i]:
+                for j in range(begin_index, len(lines)):
+                    if lines[j] == '}\n':
+                        end_index = j
+                        break
+
+                for k in range(begin_index, end_index + 1):
+                    lines[k] = ''
+
+    with open(prototxt_path, 'w') as f:
+        for line in lines:
+            f.write(line)
+
+
 def create_caffe_net_struct(keras_model_path, prototxt_path):
+    """
+    It goes through the Keras model and creates the prototxt of an equivalent Caffe one.
+
+    Arguments:
+        keras_model_path: the path to a file containing the Keras model
+        prototxt_path: the path to the prototxt file to create
+    """
+
     # load the keras model
     keras_model = tf.keras.models.load_model(keras_model_path)
 
@@ -51,15 +90,17 @@ def create_caffe_net_struct(keras_model_path, prototxt_path):
                 if k == bottom_name:
                     found_bottom = True
                     caffe_net.tops[name] = layers.Convolution(caffe_net.tops[k], num_output=num_output, kernel_size=kernel_size)
+                    break
 
             if not found_bottom:
                 print(f"Bottom NOT found for layer {name}")
 
 
-
-
     print('All types present: ', types)
-    return caffe_net.to_proto()
+    with open(prototxt_path, 'a') as prototxt:
+        prototxt.write(str(caffe_net.to_proto()))
+
+    fix_prototxt(prototxt_path)
 
 
 if __name__ == '__main__':
@@ -71,25 +112,4 @@ if __name__ == '__main__':
     args = parser.parse_args()
 
     args.prototxt = args.prototxt + ('' if args.prototxt[-9 : ] == '.prototxt' else '.prototxt')
-    with open(args.prototxt, 'a') as f:
-        f.write(str(create_caffe_net_struct(args.keras_model, args.prototxt)))
-
-    # Delete from prototxt a redundant input layer
-    with open(args.prototxt, 'r') as f:
-        lines = f.readlines()
-        for i in range(len(lines)):
-            if lines[i] == 'layer {\n':
-                begin_index = i
-
-            if 'type: "Input"' in lines[i]:
-                for j in range(begin_index, len(lines)):
-                    if lines[j] == '}\n':
-                        end_index = j
-                        break
-
-                for k in range(begin_index, end_index + 1):
-                    lines[k] = ''
-
-    with open(args.prototxt, 'w') as f:
-        for line in lines:
-            f.write(line)
+    create_caffe_net_struct(args.keras_model, args.prototxt)

@@ -1,3 +1,7 @@
+"""
+Reads the net's weights and store them into a pickle
+"""
+
 import tensorflow as tf
 from tensorflow import keras
 from tensorflow.keras.layers import Input, Conv2D, ReLU, MaxPooling2D, PReLU, Concatenate
@@ -11,6 +15,14 @@ import argparse
 
 
 def save_keras_weights(model_path, weights_path):
+    """
+    Reads the net's weights and store them into a pickle.
+
+    Arguments:
+        model_path: the path to the Keras model file
+        weights_path: the path to the pickle file for storing the net's weights
+    """
+
     keras_model = tf.keras.models.load_model(model_path)
 
     # Since both Keras and Caffe models don't fit in the memory, I create a dictionary with the weights to be copied
