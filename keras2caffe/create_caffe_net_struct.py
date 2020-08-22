@@ -76,7 +76,7 @@ def create_caffe_net_struct(keras_model_path, prototxt_path):
                 prototxt.write(f'input_dim: {shape[1]}\ninput_dim: {shape[2]}\n')
             caffe_net.tops[name] = L.Input()
 
-        elif type in ('Conv2D', 'ReLU'):
+        elif type in ('Conv2D', 'ReLU', 'MaxPooling2D'):
             # To get the bottom, we first access to the node which connects
             # those two layers and then takes the layer which is on its input
             bottom_name = layer._inbound_nodes[0].inbound_layers.name
@@ -88,18 +88,29 @@ def create_caffe_net_struct(keras_model_path, prototxt_path):
                     break
 
             if not found_bottom:
-                print(f"Bottom NOT found for layer {name}")
+                #print(f"Bottom NOT found for layer {name}")
+                pass
 
             else:
                 if type == 'Conv2D':
+                    config = layer.get_config()
                     filters = layer.get_weights()[0]
                     biases = layer.get_weights()[1]
-                    num_output = np.shape(biases)[0]
-                    kernel_size = np.shape(filters)[0]  # assuming only spatially square kernels
+                    num_output = config['filters']  # equivalent to: num_output = np.shape(biases)[0]
+                    kernel_size = config['kernel_size'][0]  # equivalent to: kernel_size = np.shape(filters)[0] (assuming only spatially square kernels)
+                    # TODO: calculate pad to write it in the prototxt
+                    if config['padding'] == 'same':
+                        pass
+                    elif config['padding'] == 'valid':
+                        pass
                     caffe_net.tops[name] = L.Convolution(bottom, num_output=num_output, kernel_size=kernel_size)
 
                 elif type == 'ReLU':
                     caffe_net.tops[name] = L.ReLU(bottom)
+
+                elif type == 'MaxPooling2D':
+                    # TODO: fill this MaxPooling2D section
+                    pass
 
     print('All types present: ', types)
     with open(prototxt_path, 'a') as prototxt:
