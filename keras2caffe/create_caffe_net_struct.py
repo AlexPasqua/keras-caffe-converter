@@ -2,14 +2,13 @@
 This script goes through the Keras model and creates the prototxt of an equivalent Caffe one
 """
 
-
 import tensorflow as tf
 from tensorflow import keras
 from tensorflow.keras import models
 from tensorflow.keras import layers
 
 import caffe
-from caffe import layers
+from caffe import layers as L
 
 import numpy as np
 import argparse
@@ -75,13 +74,9 @@ def create_caffe_net_struct(keras_model_path, prototxt_path):
                 shape[0] = shape[0] if shape[0] != None else 1
                 prototxt.write(f'input_dim: {shape[0]}\ninput_dim: {shape[3]}\n')
                 prototxt.write(f'input_dim: {shape[1]}\ninput_dim: {shape[2]}\n')
-            caffe_net.tops[name] = layers.Input()
+            caffe_net.tops[name] = L.Input()
 
-        elif type == 'Conv2D':
-            filters = layer.get_weights()[0]
-            biases = layer.get_weights()[1]
-            num_output = np.shape(biases)[0]
-            kernel_size = np.shape(filters)[0]  # assuming only spatially square kernels
+        elif type in ('Conv2D', 'ReLU'):
             # To get the bottom, we first access to the node which connects
             # those two layers and then takes the layer which is on its input
             bottom_name = layer._inbound_nodes[0].inbound_layers.name
@@ -89,12 +84,22 @@ def create_caffe_net_struct(keras_model_path, prototxt_path):
             for k in caffe_net.tops.keys():
                 if k == bottom_name:
                     found_bottom = True
-                    caffe_net.tops[name] = layers.Convolution(caffe_net.tops[k], num_output=num_output, kernel_size=kernel_size)
+                    bottom = caffe_net.tops[k]
                     break
 
             if not found_bottom:
                 print(f"Bottom NOT found for layer {name}")
 
+            else:
+                if type == 'Conv2D':
+                    filters = layer.get_weights()[0]
+                    biases = layer.get_weights()[1]
+                    num_output = np.shape(biases)[0]
+                    kernel_size = np.shape(filters)[0]  # assuming only spatially square kernels
+                    caffe_net.tops[name] = L.Convolution(bottom, num_output=num_output, kernel_size=kernel_size)
+
+                elif type == 'ReLU':
+                    caffe_net.tops[name] = L.ReLU(bottom)
 
     print('All types present: ', types)
     with open(prototxt_path, 'a') as prototxt:

@@ -11,7 +11,7 @@ import argparse
 layers_strings = {
     'Input': "\tinput = Input(shape=({},{},{}), name='{}')\n",
     'Convolution': "\t{} = Conv2D(name='{}', filters={}, kernel_size={}, strides={}, padding='same')({})\n",
-    'ReLU': "\t{} = ReLU()({})\n",
+    'ReLU': "\t{} = ReLU(name='{}')({})\n",
     'PReLU': "\t{} = PReLU(name='{}')({})\n",
     'Concat': "\t{} = Concatenate(name='{}')([{}])\n\n",
     'Pooling': "\t{} = {}Pooling2D(pool_size={}, strides={}, padding='valid')({})\n",
@@ -49,7 +49,7 @@ def write_layer(layer_data, outfile):
                                                        write_layer.prev_layer_top))
 
     elif layer_data['type'] == 'ReLU':
-        outfile.write(layers_strings['ReLU'].format(write_layer.prev_layer_name, write_layer.prev_layer_name))
+        outfile.write(layers_strings['ReLU'].format(write_layer.prev_layer_name, layer_data['name'], write_layer.prev_layer_name))
 
     elif layer_data['type'] == 'PReLU':
         outfile.write(layers_strings['PReLU'].format(write_layer.prev_layer_name, layer_data['name'], write_layer.prev_layer_name))
