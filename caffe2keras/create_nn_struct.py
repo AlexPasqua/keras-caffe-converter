@@ -14,7 +14,7 @@ layers_strings = {
     'ReLU': "\t{} = ReLU(name='{}')({})\n",
     'PReLU': "\t{} = PReLU(name='{}')({})\n",
     'Concat': "\t{} = Concatenate(name='{}')([{}])\n\n",
-    'Pooling': "\t{} = {}Pooling2D(pool_size={}, strides={}, padding='valid')({})\n",
+    'Pooling': "\t{} = {}Pooling2D(name='{}', pool_size={}, strides={}, padding='valid')({})\n",
     'unknown': "\t\nUNKNOWN Layer --> line: {}\tname: {}\t type: {}\n\n",
 }
 
@@ -44,6 +44,7 @@ def write_layer(layer_data, outfile):
     elif layer_data['type'] == 'Pooling':
         outfile.write(layers_strings['Pooling'].format(layer_data['name'],
                                                        pool_type[layer_data['pool']],
+                                                       layer_data['name'],
                                                        layer_data['kernel_size'],
                                                        layer_data['stride'],
                                                        write_layer.prev_layer_top))

@@ -92,25 +92,32 @@ def create_caffe_net_struct(keras_model_path, prototxt_path):
                 pass
 
             else:
+                # For padding, kernel_size and pool_size, I only take the 1st number of the tuple I get with layer.get_config()
+                # because Caffe only accepts spatially square kernels
                 if type == 'Conv2D':
                     config = layer.get_config()
                     filters = layer.get_weights()[0]
                     biases = layer.get_weights()[1]
                     num_output = config['filters']  # equivalent to: num_output = np.shape(biases)[0]
-                    kernel_size = config['kernel_size'][0]  # equivalent to: kernel_size = np.shape(filters)[0] (assuming only spatially square kernels)
-                    # TODO: calculate pad to write it in the prototxt
-                    if config['padding'] == 'same':
-                        pass
-                    elif config['padding'] == 'valid':
-                        pass
-                    caffe_net.tops[name] = L.Convolution(bottom, num_output=num_output, kernel_size=kernel_size)
+                    kernel_size = config['kernel_size'][0]  # equivalent to: kernel_size = np.shape(filters)[0]
+                    if config['padding'] == 'same':     # maintain the same spatial size
+                        stride = config['strides'][0]
+                        layer_input_size = np.shape(layer._inbound_nodes[0].inbound_layers.output)[1]
+                        pad = (stride * (np.shape(layer.output)[1] - 1) - layer_input_size + kernel_size) // 2
+                    elif config['padding'] == 'valid': pad = 0
+                    caffe_net.tops[name] = L.Convolution(bottom, num_output=num_output, kernel_size=kernel_size, pad=pad)
 
                 elif type == 'ReLU':
                     caffe_net.tops[name] = L.ReLU(bottom)
 
                 elif type == 'MaxPooling2D':
-                    # TODO: fill this MaxPooling2D section
-                    pass
+                    config = layer.get_config()
+                    pool_size = config['pool_size'][0]
+                    stride = config['strides'][0]
+                    print(name)
+                    print(config)
+                    print()
+                    caffe_net.tops[name] = L.Pooling(bottom, pool=0, stride=stride, kernel_size=pool_size)
 
     print('All types present: ', types)
     with open(prototxt_path, 'a') as prototxt:
