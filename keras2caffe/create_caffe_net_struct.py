@@ -76,7 +76,7 @@ def create_caffe_net_struct(keras_model_path, prototxt_path):
                 prototxt.write(f'input_dim: {shape[1]}\ninput_dim: {shape[2]}\n')
             caffe_net.tops[name] = L.Input()
 
-        elif type in ('Conv2D', 'ReLU', 'MaxPooling2D', 'PReLU', 'Concat'):
+        elif type in ('Conv2D', 'ReLU', 'MaxPooling2D', 'PReLU'):
             # To get the bottom, we first access to the node which connects
             # those two layers and then takes the layer which is on its input
             bottom_name = layer._inbound_nodes[0].inbound_layers.name
@@ -119,9 +119,36 @@ def create_caffe_net_struct(keras_model_path, prototxt_path):
                 elif type == 'PReLU':
                     caffe_net.tops[name] = L.PReLU(bottom)
 
-                elif type == 'Concat':
-                    # TODO: fill with concat layer managing
-                    pass
+        elif type == 'Concatenate':
+            # To get the bottom, we first access to the node which connects
+            # the two layers and then we take each inbound layer (which is one of the many bottoms)
+            bottoms_list = []
+            for i in range(np.shape(layer._inbound_nodes[0].inbound_layers)[0]):
+                current = layer._inbound_nodes[0].inbound_layers[i]
+                # In case a layer is followed by an activation layer, even if the top
+                # does not take the name of the activation layer, the inbound layer will be that.
+                # So in this case we take the "bottom of the bottom", because on the prototxt the concat layer
+                # wants the name of the "top" field of the layers to connect.
+                # e.g.
+                # layer {name: "conv1", top: "conv1" ...} layer {name: "relu1", type: "ReLU" top: "conv1" ...}
+                # layer {name: concat, type: "Concat", bottom: "conv1" ...}
+                if current.__class__.__name__ in ('ReLU', 'PReLU'):
+                    bottom_name = current._inbound_nodes[0].inbound_layers.name
+                else:
+                    bottom_name = current.name
+
+                for k in caffe_net.tops.keys():
+                    if k == bottom_name:
+                        bottom = caffe_net.tops[k]
+                bottoms_list.append(bottom)
+
+            # unfortunately the following works only with concatenation of 2 or 3 layers
+            if len(bottoms_list) == 2:
+                caffe_net.tops[name] = L.Concat(bottoms_list[0], bottoms_list[1])
+            elif len(bottoms_list) == 3:
+                caffe_net.tops[name] = L.Concat(bottoms_list[0], bottoms_list[1], bottoms_list[2])
+            else:
+                print("\n\nE: found concat layer with more than 3 bottoms. This programm cannot handle it\t", len(bottoms_list))
 
     print('All types present: ', types)
     with open(prototxt_path, 'a') as prototxt:
