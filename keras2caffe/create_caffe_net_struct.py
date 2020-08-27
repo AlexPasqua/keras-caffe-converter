@@ -78,46 +78,36 @@ def create_caffe_net_struct(keras_model_path, prototxt_path):
 
         elif type in ('Conv2D', 'ReLU', 'MaxPooling2D', 'PReLU'):
             # To get the bottom, we first access to the node which connects
-            # those two layers and then takes the layer which is on its input
+            # two layers and then we take the node's inbound layer
             bottom_name = layer._inbound_nodes[0].inbound_layers.name
-            found_bottom = False
-            for k in caffe_net.tops.keys():
-                if k == bottom_name:
-                    found_bottom = True
-                    bottom = caffe_net.tops[k]
-                    break
+            bottom = caffe_net.tops[bottom_name]
 
-            if not found_bottom:
-                #print(f"Bottom NOT found for layer {name}")
-                pass
-
-            else:
-                # For padding, kernel_size and pool_size, I only take the 1st number of the tuple I get with layer.get_config()
-                # because Caffe only accepts spatially square kernels
-                if type == 'Conv2D':
-                    config = layer.get_config()
-                    filters = layer.get_weights()[0]
-                    biases = layer.get_weights()[1]
-                    num_output = config['filters']  # equivalent to: num_output = np.shape(biases)[0]
-                    kernel_size = config['kernel_size'][0]  # equivalent to: kernel_size = np.shape(filters)[0]
-                    if config['padding'] == 'same':     # maintain the same spatial size
-                        stride = config['strides'][0]
-                        layer_input_size = np.shape(layer._inbound_nodes[0].inbound_layers.output)[1]
-                        pad = (stride * (np.shape(layer.output)[1] - 1) - layer_input_size + kernel_size) // 2
-                    elif config['padding'] == 'valid': pad = 0
-                    caffe_net.tops[name] = L.Convolution(bottom, num_output=num_output, kernel_size=kernel_size, pad=pad)
-
-                elif type == 'ReLU':
-                    caffe_net.tops[name] = L.ReLU(bottom)
-
-                elif type == 'MaxPooling2D':
-                    config = layer.get_config()
-                    pool_size = config['pool_size'][0]
+            # For padding, kernel_size and pool_size, I only take the 1st number of the tuple I get with layer.get_config()
+            # because Caffe only accepts spatially square kernels
+            if type == 'Conv2D':
+                config = layer.get_config()
+                filters = layer.get_weights()[0]
+                biases = layer.get_weights()[1]
+                num_output = config['filters']  # equivalent to: num_output = np.shape(biases)[0]
+                kernel_size = config['kernel_size'][0]  # equivalent to: kernel_size = np.shape(filters)[0]
+                if config['padding'] == 'same':     # maintain the same spatial size
                     stride = config['strides'][0]
-                    caffe_net.tops[name] = L.Pooling(bottom, pool=0, stride=stride, kernel_size=pool_size)
+                    layer_input_size = np.shape(layer._inbound_nodes[0].inbound_layers.output)[1]
+                    pad = (stride * (np.shape(layer.output)[1] - 1) - layer_input_size + kernel_size) // 2
+                elif config['padding'] == 'valid': pad = 0
+                caffe_net.tops[name] = L.Convolution(bottom, num_output=num_output, kernel_size=kernel_size, pad=pad)
 
-                elif type == 'PReLU':
-                    caffe_net.tops[name] = L.PReLU(bottom)
+            elif type == 'ReLU':
+                caffe_net.tops[name] = L.ReLU(bottom)
+
+            elif type == 'PReLU':
+                caffe_net.tops[name] = L.PReLU(bottom)
+
+            elif type == 'MaxPooling2D':
+                config = layer.get_config()
+                pool_size = config['pool_size'][0]
+                stride = config['strides'][0]
+                caffe_net.tops[name] = L.Pooling(bottom, pool=0, stride=stride, kernel_size=pool_size)
 
         elif type == 'Concatenate':
             # To get the bottom, we first access to the node which connects
@@ -137,12 +127,13 @@ def create_caffe_net_struct(keras_model_path, prototxt_path):
                 else:
                     bottom_name = current.name
 
+                # pick the bottom
                 for k in caffe_net.tops.keys():
                     if k == bottom_name:
                         bottom = caffe_net.tops[k]
                 bottoms_list.append(bottom)
 
-            # unfortunately the following works only with concatenation of 2 or 3 layers
+            # unfortunately the following currently works only with concatenation of 2 or 3 layers
             if len(bottoms_list) == 2:
                 caffe_net.tops[name] = L.Concat(bottoms_list[0], bottoms_list[1])
             elif len(bottoms_list) == 3:
