@@ -76,7 +76,7 @@ def create_caffe_net_struct(keras_model_path, prototxt_path):
                 prototxt.write(f'input_dim: {shape[1]}\ninput_dim: {shape[2]}\n')
             caffe_net.tops[name] = L.Input()
 
-        elif type in ('Conv2D', 'ReLU', 'MaxPooling2D'):
+        elif type in ('Conv2D', 'ReLU', 'MaxPooling2D', 'PReLU'):
             # To get the bottom, we first access to the node which connects
             # those two layers and then takes the layer which is on its input
             bottom_name = layer._inbound_nodes[0].inbound_layers.name
@@ -114,10 +114,10 @@ def create_caffe_net_struct(keras_model_path, prototxt_path):
                     config = layer.get_config()
                     pool_size = config['pool_size'][0]
                     stride = config['strides'][0]
-                    print(name)
-                    print(config)
-                    print()
                     caffe_net.tops[name] = L.Pooling(bottom, pool=0, stride=stride, kernel_size=pool_size)
+
+                elif type == 'PReLU':
+                    caffe_net.tops[name] = L.PReLU(bottom)
 
     print('All types present: ', types)
     with open(prototxt_path, 'a') as prototxt:
