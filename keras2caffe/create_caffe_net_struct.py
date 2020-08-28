@@ -115,14 +115,14 @@ def create_caffe_net_struct(keras_model_path, prototxt_path):
             bottoms_list = []
             for i in range(np.shape(layer._inbound_nodes[0].inbound_layers)[0]):
                 current = layer._inbound_nodes[0].inbound_layers[i]
-                # In case a layer is followed by an activation layer, even if the top
+                """# In case a layer is followed by an activation layer, even if the top
                 # does not take the name of the activation layer, the inbound layer will be that.
                 # So in this case we take the "bottom of the bottom", because on the prototxt the concat layer
                 # wants the name of the "top" field of the layers to connect.
                 # e.g.
                 # layer {name: "conv1", top: "conv1" ...} layer {name: "relu1", type: "ReLU" top: "conv1" ...}
                 # layer {name: concat, type: "Concat", bottom: "conv1" ...}
-                """if current.__class__.__name__ in ('ReLU', 'PReLU'):
+                if current.__class__.__name__ in ('ReLU', 'PReLU'):
                     bottom_name = current._inbound_nodes[0].inbound_layers.name
                 else:
                     bottom_name = current.name"""
