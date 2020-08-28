@@ -122,12 +122,13 @@ def create_caffe_net_struct(keras_model_path, prototxt_path):
                 # e.g.
                 # layer {name: "conv1", top: "conv1" ...} layer {name: "relu1", type: "ReLU" top: "conv1" ...}
                 # layer {name: concat, type: "Concat", bottom: "conv1" ...}
-                if current.__class__.__name__ in ('ReLU', 'PReLU'):
+                """if current.__class__.__name__ in ('ReLU', 'PReLU'):
                     bottom_name = current._inbound_nodes[0].inbound_layers.name
                 else:
-                    bottom_name = current.name
+                    bottom_name = current.name"""
 
                 # pick the bottom
+                bottom_name = current.name
                 for k in caffe_net.tops.keys():
                     if k == bottom_name:
                         bottom = caffe_net.tops[k]
