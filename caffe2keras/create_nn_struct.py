@@ -78,7 +78,6 @@ def write_nn_struct_code_keras(prototxt_path, outfile_path):
     Arguments: argv should contain...
         prototxt (str): The filename (full path including file extension) of the '.prototxt' file that defines the Caffe model
         outfile (str): The filename (full path including file extension) of the file where you want the code to be written in
-        start_line (int): The line of [outfile] where you want the Keras code to start in
 
     Returns: None
     """
