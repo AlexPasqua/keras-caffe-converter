@@ -26,7 +26,7 @@ def find_concat_axis(shapes, concat_channels=True, concat_batches=True, begin_in
                     'begin_index-th' shape with the next one (if exists)
         checking_channels: boolean to skip a section in case we're not concatenating by channels
 
-    Returns: the concatenation axis
+    Returns: the number representing the concatenation axis (in Caffe format)
     """
 
     if begin_index + 1 < len(shapes):
