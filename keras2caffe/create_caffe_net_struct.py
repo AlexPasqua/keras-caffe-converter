@@ -14,7 +14,7 @@ import numpy as np
 import argparse
 
 
-def find_concat_axis(shapes, concat_channels=True, concat_batches=True, begin_index=0):
+def find_concat_axis(shapes, concat_channels=True, concat_batches=True, begin_index=0, checking_channels=True):
     """
     Finds which is the concatenation axis of the layers to concatenate in a Concat layer
 
@@ -24,51 +24,39 @@ def find_concat_axis(shapes, concat_channels=True, concat_batches=True, begin_in
         concat_batches: True if we concatenate the batches (needed for recursion)
         begin_index: needed because the function is recursive. At each recursion it compare the
                     'begin_index-th' shape with the next one (if exists)
+        checking_channels: boolean to skip a section in case we're not concatenating by channels
 
     Returns: the concatenation axis
     """
 
     if begin_index + 1 < len(shapes):
-        # compare the 2 shapes
-        if concat_channels and
-            shapes[begin_index][0] == shapes[begin_index + 1][0] and
-            shapes[begin_index][1] == shapes[begin_index + 1][1] and
-            shapes[begin_index][2] == shapes[begin_index + 1][2]:
-            # concat_channels = True
-            find_concat_axis(shapes, concat_channels, concat_batches, begin_index + 1)
-        else:
-            concat_channels = False
-            begin_index = 0
+        if checking_channels:   # if false, we jump this section
+            # compare the 2 shapes
+            if concat_channels and \
+                shapes[begin_index][0] == shapes[begin_index + 1][0] and \
+                shapes[begin_index][1] == shapes[begin_index + 1][1] and \
+                shapes[begin_index][2] == shapes[begin_index + 1][2]:
+                # concat_channels = True
+                find_concat_axis(shapes, concat_channels, concat_batches, begin_index + 1, checking_channels)
+            else:
+                concat_channels = False
+                checking_channels = False
+                begin_index = 0
 
-        if concat_batches and
-            shapes[begin_index][3] == shapes[begin_index + 1][3] and
-            shapes[begin_index][1] == shapes[begin_index + 1][1] and
+        if concat_batches and \
+            shapes[begin_index][3] == shapes[begin_index + 1][3] and \
+            shapes[begin_index][1] == shapes[begin_index + 1][1] and \
             shapes[begin_index][2] == shapes[begin_index + 1][2]:
             # concat_batches = True
-            find_concat_axis(shapes, concat_channels, concat_batches, begin_index + 1)
+            find_concat_axis(shapes, concat_channels, concat_batches, begin_index + 1, checking_channels)
         else:
-            concat_channels = False
+            concat_batches = False
 
     ### Now we checked all the shapes ###
     # Caffe only has 2 possible values for the concat axis: 1 and 0
     if concat_channels: return 1
     elif concat_batches: return 0
     else: return -1     # Error
-
-
-
-    concat_channels = True
-    channels_index = 3
-
-    if index + 1 < len(shapes):
-        if shapes[index][channels_index] == shapes[index + 1][channels_index]:
-            same_channels = True
-            return find_concat_axis(shapes, index + 1)
-        else:
-            same_channels = False
-
-    if same_channels:
-        return 1
 
 
 def fix_prototxt(prototxt_path):
@@ -195,13 +183,13 @@ def create_caffe_net_struct(keras_model_path, prototxt_path):
 
             # Check concat axis
             if layer.get_config()['axis'] == -1:
-                axis = find_concat_axis(shapes)
+                axis = find_concat_axis(bottoms_shapes)
 
             # unfortunately the following currently works only with concatenation of 2 or 3 layers
             if len(bottoms_list) == 2:
-                caffe_net.tops[name] = L.Concat(bottoms_list[0], bottoms_list[1])
+                caffe_net.tops[name] = L.Concat(bottoms_list[0], bottoms_list[1], axis=axis)
             elif len(bottoms_list) == 3:
-                caffe_net.tops[name] = L.Concat(bottoms_list[0], bottoms_list[1], bottoms_list[2])
+                caffe_net.tops[name] = L.Concat(bottoms_list[0], bottoms_list[1], bottoms_list[2], axis=axis)
             else:
                 print("\n\nE: found concat layer with more than 3 bottoms. This programm cannot handle it\t", len(bottoms_list))
 
