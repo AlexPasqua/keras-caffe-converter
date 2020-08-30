@@ -82,7 +82,6 @@ def write_nn_struct_code_keras(prototxt_path, outfile_path):
     Returns: None
     """
 
-
     # Dictionary containing one layer's data
     layer_data = {'name': '', 'type': '', 'bottoms': [], 'top': '',
         'num_output': 0, 'pool': 'MAX', 'kernel_size': 0, 'stride': 1
