@@ -155,7 +155,6 @@ def write_nn_struct_code_keras(prototxt_path, outfile_path):
 
             # After the for cycle finished...
             outfile.write(f"\tkeras_model = tf.keras.Model(inputs=input, outputs={layer_data['name']})")
-            outfile.write('\n\tkeras_model.summary()')
 
 
 if __name__ == '__main__':
