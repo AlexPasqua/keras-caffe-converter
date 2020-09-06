@@ -1,8 +1,12 @@
+""" Converts a caffe model into a Keras equivalent one """
+
 import tensorflow as tf
 from tensorflow import keras
 from tensorflow.keras import models
 from tensorflow.keras import layers
 
+import os.path
+from pathlib import Path
 import argparse
 
 import sys
@@ -12,6 +16,11 @@ import create_nn_struct
 
 
 def write_beginning(outfile):
+    """
+    Writes the initial part of the source file to generate the Keras model (imports etc)
+    Arguments:
+        outfile: a file object to write the code in
+    """
     import_modules = {
         'tensorflow': ['keras'],
         'tensorflow.keras': ['models'],
@@ -24,21 +33,46 @@ def write_beginning(outfile):
     outfile.write("\n\ndef keras_model():\n")
 
 
-def caffe2keras(prototxt_path, km_src_path, km_path):
-    km_src_path = km_src_path + ('' if km_src_path[-3 : ] == '.py' else '.py')
-    km_path = km_path + ('' if km_path[-3 : ] == '.h5' else '.h5')
+def write_src(prototxt_path, output_dir):
+    """
+    Writes the Python source file defining the Keras model
+    Arguments:
+        prototxt_path: the path to the model's prototxt file
+        outsrc_path: the path to the output Python source file defining the Keras model
+    """
 
-    # Write beginning of the source file containing the Keras model
-    with open(km_src_path, 'w') as outfile:
+    # Create the output directory (if it doens't exist)
+    Path(output_dir).mkdir(parents=True, exist_ok=True)
+
+    outsrc_path = output_dir + '/net_caffe2keras.py'
+    with open(outsrc_path, 'w') as outfile:
         write_beginning(outfile)
-
-    # Write in km_src_path th ìe Keras code to generate the model
-    create_nn_struct.write_nn_struct_code_keras(prototxt_path, km_src_path)
-
-    # Write the end of the source file
-    with open(km_src_path, 'a') as outfile:
+    create_nn_struct.write_nn_struct_code_keras(prototxt_path, outsrc_path)
+    with open(outsrc_path, 'a') as outfile:
         outfile.write("\n\n\treturn keras_model\n\n\n")
         outfile.write(f"if __name__ == '__main__':\n\tkeras_model().save('{km_path}')")
+
+
+def caffe2keras(prototxt_path, output_dir, verbose):
+    """
+    Converts a caffe model into a Keras qìequivalent one
+    Arguments:
+        prototxt_path: the path to the model's prototxt file
+        outsrc_path: the path to the output Python source file defining the Keras model
+    """
+
+    # Write the Python source file containing the keras model
+    write_src(prototxt_path, output_dir)
+
+    # Import the source file we just created
+    import sys
+    sys.path.insert(1, output_dir)
+    import net_caffe2keras
+
+    # Take the model from the source file
+    keras_model = net_caffe2keras.keras_model()
+    if verbose:
+        keras_model.summary()
 
 
 if __name__ == '__main__':
@@ -48,7 +82,7 @@ if __name__ == '__main__':
     )
     parser.add_argument('prototxt', action='store', help="The filename (full path including file extension) of the '.prototxt' file that defines the Caffe model.")
     parser.add_argument('caffemodel', action='store', help="The filename (full path including file extension) of the '.caffemodel' file that contains the network's parameters")
-    parser.add_argument('keras_model_source_file', action='store', help="The filename (full path WITHOUT extension) of the Python file where you want the code to be written in.")
-    parser.add_argument('keras_model', action='store', help="The filename (full path WITHOUT extension) of the .h5 file containing the Keras model")
+    parser.add_argument('output_dir', action='store', help="The path to the directory where to save the Keras model and the file where you want the code to be written in.")
+    parser.add_argument('-v', '--verbose', action='store')
     args = parser.parse_args()
-    caffe2keras(args.prototxt, args.keras_model_source_file, args.keras_model)
+    caffe2keras(args.prototxt, args.output_dir, args.verbose)
