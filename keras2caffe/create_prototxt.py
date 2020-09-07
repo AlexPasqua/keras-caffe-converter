@@ -10,6 +10,8 @@ from tensorflow.keras import layers
 import caffe
 from caffe import layers as L
 
+import os.path
+from pathlib import Path
 import numpy as np
 import argparse
 
@@ -93,6 +95,13 @@ def create_caffe_net_struct(keras_model_path, prototxt_path):
         keras_model_path: the path to a file containing the Keras model
         prototxt_path: the path to the prototxt file to create
     """
+
+    # Create the output directory (if it doens't exist)
+    for i in range(len(prototxt_path) - 1, -1, -1):
+        if prototxt_path[i] == '/':
+            output_dir = prototxt_path[ : i + 1]
+            break
+    Path(output_dir).mkdir(parents=True, exist_ok=True)
 
     # load the keras model
     keras_model = tf.keras.models.load_model(keras_model_path)
