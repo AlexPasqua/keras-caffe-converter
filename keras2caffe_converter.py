@@ -1,3 +1,5 @@
+""" From a Keras model, creates and equivalent Caffe one """
+
 import tensorflow as tf
 from tensorflow import keras
 from tensorflow.keras import models
@@ -11,7 +13,7 @@ from os import system
 
 def keras2caffe(keras_model_path, prototxt_path, caffemodel_path):
     if prototxt_path == None:
-        prototxt_path = 'generated_prototxt'
+        prototxt_path = 'generated_prototxt.prototxt'
         cmd = 'python3 keras2caffe/create_prototxt.py ' + keras_model_path + ' ' + prototxt_path
         os.system(cmd)
     cmd = 'python3 keras2caffe/k2c_1.py ' + keras_model_path + ' km_weights.pkl'

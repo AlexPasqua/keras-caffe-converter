@@ -13,6 +13,7 @@ from caffe import layers as cl, params as cp
 import numpy as np
 import pickle
 import argparse
+import subprocess
 
 
 def create_caffe_net(prototxt_path, weights_path, caffemodel_path):
@@ -30,9 +31,17 @@ def create_caffe_net(prototxt_path, weights_path, caffemodel_path):
     with open(weights_path, 'rb') as f:
         weights = pickle.load(f)
 
-    # Caffe net
-    caffe.set_device(0)
-    caffe.set_mode_gpu()
+    # Check if using caffe-cpu or caffe-cuda and create the Caffe net
+    pkg_name = 'caffe-cuda'
+    cmd_output = subprocess.run(['dpkg-query', '-s', pkg_name], stdout=subprocess.PIPE)
+    cmd_output.stdout = cmd_output.stdout.decode('utf-8')
+    # cmd = subprocess.Popen(['dpkg-query -s {}'.format(pkg_name)], stdout=subprocess.PIPE, stderr=subprocess.STDOUT)
+    # stdout, stderr = cmd.communicate()
+    if 'Package: {}'.format(pkg_name) in cmd_output.stdout and 'Status: install ok installed' in cmd_output.stdout:
+        caffe.set_device(0)
+        caffe.set_mode_gpu()
+    else:
+        caffe.set_mode_cpu()
     caffe_model = caffe.Net(prototxt_path, caffe.TEST)
 
     # Load weights in the Caffe model
