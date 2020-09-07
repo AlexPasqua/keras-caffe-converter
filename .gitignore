@@ -5,3 +5,4 @@
 *.pkl
 caffe2keras/__pycache__/*
 keras2caffe/__pycache__/*
+models/*
