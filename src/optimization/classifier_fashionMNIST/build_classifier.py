@@ -43,10 +43,12 @@ def load_images():
 
 def build_and_save_model(train_images, train_labels, test_images, test_labels):
     # Build model
+    tf.keras.backend.set_floatx('float16')
     model = keras.Sequential([
         keras.layers.Flatten(input_shape=(28, 28)),
         keras.layers.Dense(128, activation='relu'),
-        keras.layers.Dense(10)
+        keras.layers.Dense(10),
+        keras.layers.Softmax()
     ])
 
     # Compile and train the model
@@ -60,14 +62,14 @@ def build_and_save_model(train_images, train_labels, test_images, test_labels):
     test_loss, test_acc = model.evaluate(test_images,  test_labels, verbose=2)
     print('\nTest accuracy:', test_acc)
 
-    # Attach a softmax layer to the model to make probability predictions
-    model = tf.keras.Sequential([model, tf.keras.layers.Softmax()])
-    model.save('classifier_fashionMNIST.h5')
+    '''# Attach a softmax layer to the model to make probability predictions
+    model = tf.keras.Sequential([model, tf.keras.layers.Softmax()])'''
+    model.save('classifier_fashionMNIST_float16.h5')
     print('Saved model to classifier_fashionMNIST.h5')
 
 
 def predict(train_images, train_labels, test_images, test_labels):
-    model = tf.keras.models.load_model('classifier_fashionMNIST.h5')
+    model = tf.keras.models.load_model('classifier_fashionMNIST_float16.h5')
     predictions = model.predict(test_images)
     index = 0
     print(f'\nPredict image {index}: {class_names[ np.argmax(predictions[index]) ]}\n')
@@ -76,6 +78,6 @@ def predict(train_images, train_labels, test_images, test_labels):
 if __name__ == '__main__':
     train, test = load_images()
     import os.path
-    if not os.path.exists('classifier_fashionMNIST.h5'):
+    if not os.path.exists('classifier_fashionMNIST_float16.h5'):
         build_and_save_model(train[0], train[1], test[0], test[1])
     predict(train[0], train[1], test[0], test[1])

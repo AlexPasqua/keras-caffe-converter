@@ -3,6 +3,6 @@
 *.onnx
 *.h5
 *.pkl
-caffe2keras/__pycache__/*
-keras2caffe/__pycache__/*
+src/conversion/caffe2keras/__pycache__/*
+src/conversion/keras2caffe/__pycache__/*
 models/*
