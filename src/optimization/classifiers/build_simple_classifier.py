@@ -63,8 +63,12 @@ def load_images(dtype):
 def build_and_save_model(model_filename, dtype, train_images, train_labels, test_images, test_labels):
     # Build model
     tf.keras.backend.set_floatx(dtype)
-    odel = keras.Sequential([
-        keras.layers.Flatten(input_shape=(28, 28)),
+    model = keras.Sequential([
+        keras.layers.InputLayer(input_shape=(28, 28)),
+        keras.layers.Reshape(target_shape=(28, 28, 1)),
+        keras.layers.Conv2D(filters=12, kernel_size=(3, 3), activation='relu', padding='same'),
+        keras.layers.MaxPooling2D(pool_size=(2, 2)),
+        keras.layers.Flatten(),
         keras.layers.Dense(128, activation='relu'),
         keras.layers.Dense(10),
         keras.layers.Softmax()
