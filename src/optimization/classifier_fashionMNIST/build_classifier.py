@@ -9,7 +9,24 @@ import argparse
 class_names = ['T-shirt/top', 'Trouser', 'Pullover', 'Dress', 'Coat',
                'Sandal', 'Shirt', 'Sneaker', 'Bag', 'Ankle boot']
 
-def load_images():
+def preprocess_images(dtype, train_images, test_images):
+    train_images = train_images / 255.0
+    test_images = test_images / 255.0
+
+    if dtype == 'float16':
+        train_images = np.float16(train_images)
+        test_images = np.float16(test_images)
+    elif dtype == 'float32':
+        train_images = np.float32(train_images)
+        test_images = np.float32(test_images)
+    elif dtype == 'float64':
+        train_images = np.float64(train_images)
+        test_images = np.float64(test_images)
+
+    return train_images, test_images
+
+
+def load_images(dtype):
     # Import Fashion MNIST dataset
     '''
     Classes:
@@ -36,9 +53,8 @@ def load_images():
     plt.show()
     """
 
-    # Process the images
-    train_images = train_images / 255.0
-    test_images = test_images / 255.0
+    # Preprocess the images
+    train_images, test_images = preprocess_images(dtype, train_images, test_images)
 
     return (train_images, train_labels), (test_images, test_labels)
 
@@ -88,7 +104,7 @@ if __name__ == '__main__':
     args = parser.parse_args()
 
     # Load images
-    train, test = load_images()
+    train, test = load_images(args.data_type)
 
     # Create the model if it doesn't exist
     model_filename = 'classifier_fashionMNIST_' + args.data_type + '.h5'
