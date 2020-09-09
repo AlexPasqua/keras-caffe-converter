@@ -2,6 +2,8 @@ import tensorflow as tf
 from tensorflow import keras
 import numpy as np
 import matplotlib.pyplot as plt
+import os.path
+import argparse
 
 
 class_names = ['T-shirt/top', 'Trouser', 'Pullover', 'Dress', 'Coat',
@@ -41,9 +43,9 @@ def load_images():
     return (train_images, train_labels), (test_images, test_labels)
 
 
-def build_and_save_model(train_images, train_labels, test_images, test_labels):
+def build_and_save_model(model_filename, dtype, train_images, train_labels, test_images, test_labels):
     # Build model
-    tf.keras.backend.set_floatx('float16')
+    tf.keras.backend.set_floatx(dtype)
     model = keras.Sequential([
         keras.layers.Flatten(input_shape=(28, 28)),
         keras.layers.Dense(128, activation='relu'),
@@ -64,20 +66,33 @@ def build_and_save_model(train_images, train_labels, test_images, test_labels):
 
     '''# Attach a softmax layer to the model to make probability predictions
     model = tf.keras.Sequential([model, tf.keras.layers.Softmax()])'''
-    model.save('classifier_fashionMNIST_float16.h5')
-    print('Saved model to classifier_fashionMNIST.h5')
+    model.save(model_filename)
+    print(f'Saved model to {model_filename}')
 
 
-def predict(train_images, train_labels, test_images, test_labels):
-    model = tf.keras.models.load_model('classifier_fashionMNIST_float16.h5')
+def predict(model_filename, train_images, train_labels, test_images, test_labels):
+    model = tf.keras.models.load_model(model_filename)
     predictions = model.predict(test_images)
     index = 0
     print(f'\nPredict image {index}: {class_names[ np.argmax(predictions[index]) ]}\n')
 
 
 if __name__ == '__main__':
+    parser = argparse.ArgumentParser(
+        description="If it doesn't already exists, this scripts creates and train a small classifier for Fashion MNIST"
+    )
+    parser.add_argument(
+        '-dt', '--data_type', action='store', type=str, choices={'float16', 'float32', 'float64'}, default='float32',
+        help="A data type [float16 | float32 | float64]"
+    )
+    args = parser.parse_args()
+
+    # Load images
     train, test = load_images()
-    import os.path
-    if not os.path.exists('classifier_fashionMNIST_float16.h5'):
-        build_and_save_model(train[0], train[1], test[0], test[1])
-    predict(train[0], train[1], test[0], test[1])
+
+    # Create the model if it doesn't exist
+    model_filename = 'classifier_fashionMNIST_' + args.data_type + '.h5'
+    if not os.path.exists(model_filename):
+        build_and_save_model(model_filename, args.data_type, train[0], train[1], test[0], test[1])
+
+    predict(model_filename, train[0], train[1], test[0], test[1])
