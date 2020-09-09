@@ -4,6 +4,7 @@ import numpy as np
 import matplotlib.pyplot as plt
 import os.path
 import argparse
+import time
 
 
 class_names = ['T-shirt/top', 'Trouser', 'Pullover', 'Dress', 'Coat',
@@ -80,17 +81,24 @@ def build_and_save_model(model_filename, dtype, train_images, train_labels, test
     test_loss, test_acc = model.evaluate(test_images,  test_labels, verbose=2)
     print('\nTest accuracy:', test_acc)
 
-    '''# Attach a softmax layer to the model to make probability predictions
-    model = tf.keras.Sequential([model, tf.keras.layers.Softmax()])'''
     model.save(model_filename)
     print(f'Saved model to {model_filename}')
 
 
 def predict(model_filename, train_images, train_labels, test_images, test_labels):
     model = tf.keras.models.load_model(model_filename)
-    predictions = model.predict(test_images)
-    index = 0
-    print(f'\nPredict image {index}: {class_names[ np.argmax(predictions[index]) ]}\n')
+    start_time = time.time()
+    predictions = model.predict(train_images)
+    end_time = time.time()
+    print(f"\nTime for prediction of {len(train_labels)} images: {end_time - start_time} seconds")
+    # index = 0
+    # print('\nResults:')
+    # for i in range(len(test_labels)):
+        # if predicted != actual...
+        # if np.argmax(predictions[i]) != test_labels[i]:
+        #    print("\nFound wrong prediction!")
+        #    print("Predicted: {:20s}\tActual: {:20s}".format(
+        #        class_names[ np.argmax(predictions[i]) ], class_names[test_labels[i]]))
 
 
 if __name__ == '__main__':
