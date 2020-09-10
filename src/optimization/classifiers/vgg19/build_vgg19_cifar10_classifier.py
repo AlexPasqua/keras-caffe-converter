@@ -9,8 +9,10 @@ import argparse
 import time
 
 
+# Images
 (train_images, train_labels), (test_images, test_labels) = tf.keras.datasets.cifar10.load_data()
 
+# Model
 model = tf.keras.applications.VGG19(
     include_top=False,
     weights='imagenet',
@@ -18,38 +20,55 @@ model = tf.keras.applications.VGG19(
     classifier_activation='relu'
 )
 
-start_time = time.time()
-_, base_model_accuracy = model.evaluate(test_images, test_labels, verbose=1)
-
+# Training hyperparameters
 batch_size = 128
 epochs = 2
 validation_split = 0.1 # 10% of training set will be used for validation set.
 num_images = train_images.shape[0] * (1 - validation_split)
 end_step = np.ceil(num_images / batch_size).astype(np.int32) * epochs
+
+# compile (necesasry for model.evaluate())
+model.compile(optimizer='adam',
+              loss=tf.keras.losses.SparseCategoricalCrossentropy(from_logits=True),
+              metrics=['accuracy'])
+
+# No training because I loaded pretrained weights
+# evaluate
+print('Base model evaluation')
+_, base_model_accuracy = model.evaluate(test_images, test_labels, verbose=1)
+
+
+# PRUNING
 pruning_params = {
       'pruning_schedule': tfmot.sparsity.keras.PolynomialDecay(initial_sparsity=0.50,
                                                                final_sparsity=0.80,
                                                                begin_step=0,
                                                                end_step=end_step)
 }
+
 pruned_model = tfmot.sparsity.keras.prune_low_magnitude(model, **pruning_params)
-model_for_pruning.compile(optimizer='adam',
+
+pruned_model.compile(optimizer='adam',
               loss=tf.keras.losses.SparseCategoricalCrossentropy(from_logits=True),
               metrics=['accuracy'])
-model_for_pruning.summary()
-callbacks = [
-  tfmot.sparsity.keras.UpdatePruningStep(),
-  tfmot.sparsity.keras.PruningSummaries(log_dir=logdir),
-]
-model_for_pruning.fit(train_images, train_labels,
+
+pruned_model.summary()
+
+callbacks = [tfmot.sparsity.keras.UpdatePruningStep()]
+
+print('Fit of pruned model')
+pruned_model.fit(train_images, train_labels,
                   batch_size=batch_size, epochs=epochs, validation_split=validation_split,
                   callbacks=callbacks)
-_, model_for_pruning_accuracy = model_for_pruning.evaluate(test_images, test_labels, verbose=1)
+
+print('Pruned model evaluation')
+_, pruned_model_accuracy = pruned_model.evaluate(test_images, test_labels, verbose=1)
+
 print("\nBase model's accuracy: ", base_model_accuracy)
-print("Pruned model's accuracy: ", model_for_pruning_accuracy)
+print("Pruned model's accuracy: ", pruned_model_accuracy)
 
 # predictions = model.predict(test_images)
-end_time = time.time()
-print(f"\nTime for prediction of {len(test_labels)} images: {end_time - start_time} seconds")
+#end_time = time.time()
+#print(f"\nTime for prediction of {len(test_labels)} images: {end_time - start_time} seconds")
 
-model.save('vgg19_cifar10_classifier.h5')
+#model.save('vgg19_cifar10_classifier.h5')
