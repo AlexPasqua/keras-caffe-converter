@@ -14,20 +14,41 @@ model = tf.keras.applications.ResNet50(
     pooling=None,
     classes=1000,
 )
-model.summary()
+# model.summary()
 
 # Load dataset
-imagegen = ImageDataGenerator()
-train = imagegen.flow_from_directory("/storage/imagenette2/train/", class_mode="categorical", shuffle=False, batch_size=128, target_size=(224, 224))
-print('train loaded')
-val = imagegen.flow_from_directory("/storage/imagenette2/val/", class_mode="categorical", shuffle=False, batch_size=128, target_size=(224, 224))
-print('val loaded')
+print('\nLoading dataset:')
+train_ds = tf.keras.preprocessing.image_dataset_from_directory(
+    directory='/storage/imagenette2/train/',
+    labels='inferred',
+    image_size=(224,224),
+    validation_split=0.2,
+    subset='training',
+    shuffle=False
+)
 
-print('Predicting:')
-predictions = model.predict(val)
-labels = decode_predictions(predictions)
-sum = 0
-for i in range(1000):
-    sum = sum + labels[i][0][2]
-avg_conf = sum / 1000.0
-print(avg_conf)
+val_ds = tf.keras.preprocessing.image_dataset_from_directory(
+    directory='/storage/imagenette2/train/',
+    labels='inferred',
+    image_size=(224,224),
+    validation_split=0.2,
+    subset="validation",
+    seed=123
+ )
+
+'''for image_batch, labels_batch in dataset:
+  print(image_batch.shape)
+  print(labels_batch.shape)
+  print()'''
+
+model.compile(optimizer='adam',
+              loss=tf.keras.losses.SparseCategoricalCrossentropy(from_logits=True),
+              metrics=['accuracy'])
+
+epochs=10
+history = model.fit(
+  train_ds,
+  validation_data=val_ds,
+  epochs=epochs,
+  batch_size=32
+)

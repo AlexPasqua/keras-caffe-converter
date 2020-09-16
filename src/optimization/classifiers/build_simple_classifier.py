@@ -1,5 +1,6 @@
 import tensorflow as tf
 from tensorflow import keras
+import tensorflow_model_optimization as tfmot
 import numpy as np
 import matplotlib.pyplot as plt
 import os.path
@@ -124,3 +125,39 @@ if __name__ == '__main__':
         build_and_save_model(model_filename, args.data_type, train[0], train[1], test[0], test[1])
 
     predict(model_filename, train[0], train[1], test[0], test[1])
+
+    # Pruning
+    model = tf.keras.models.load_model(model_filename)
+    prune_low_magnitude = tfmot.sparsity.keras.prune_low_magnitude
+    batch_size = 128
+    epochs = 2
+    validation_split = 0.1
+    num_images = train[0].shape[0] * (1 - validation_split)
+    end_step = np.ceil(num_images / batch_size).astype(np.int32) * epochs
+
+    pruning_params = {
+        'pruning_schedule': tfmot.sparsity.keras.PolynomialDecay(initial_sparsity=0.50,
+                                                                 final_sparsity=0.80,
+                                                                 begin_step=0,
+                                                                 end_step=end_step)
+    }
+    model_for_pruning = prune_low_magnitude(model, **pruning_params)
+    model_for_pruning.compile(optimizer='adam',
+              loss=tf.keras.losses.SparseCategoricalCrossentropy(from_logits=True),
+              metrics=['accuracy'])
+
+    # model_for_pruning.summary()
+    callbacks = [tfmot.sparsity.keras.UpdatePruningStep()]
+
+    model_for_pruning.fit(train[0], train[1],
+                          batch_size=batch_size,
+                          epochs=epochs,
+                          validation_split=validation_split,
+                          callbacks=callbacks)
+
+    _, model_for_pruning_accuracy = model_for_pruning.evaluate(test[0], test[1], verbose=0)
+    print('Pruned test accuracy:', model_for_pruning_accuracy)
+
+    # Export the model
+    model_for_export = tfmot.sparsity.keras.strip_pruning(model_for_pruning)
+    model_for_export.save('/storage/keras-caffe_converter_optimizer/models/simple_classifier_PRUNED.h5', include_optimizer=False)
