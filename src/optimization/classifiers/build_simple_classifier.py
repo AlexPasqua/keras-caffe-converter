@@ -124,10 +124,15 @@ if __name__ == '__main__':
     if not os.path.exists(model_filename):
         build_and_save_model(model_filename, args.data_type, train[0], train[1], test[0], test[1])
 
-    predict(model_filename, train[0], train[1], test[0], test[1])
+    # predict(model_filename, train[0], train[1], test[0], test[1])
+
+    model = tf.keras.models.load_model(model_filename)
+    model.compile(optimizer='adam',
+                  loss=tf.keras.losses.SparseCategoricalCrossentropy(from_logits=True),
+                  metrics=['accuracy'])
+    _, base_model_accuracy = model.evaluate(test[0], test[1], verbose=2)
 
     # Pruning
-    model = tf.keras.models.load_model(model_filename)
     prune_low_magnitude = tfmot.sparsity.keras.prune_low_magnitude
     batch_size = 128
     epochs = 2
@@ -156,7 +161,8 @@ if __name__ == '__main__':
                           callbacks=callbacks)
 
     _, model_for_pruning_accuracy = model_for_pruning.evaluate(test[0], test[1], verbose=0)
-    print('Pruned test accuracy:', model_for_pruning_accuracy)
+    print('Base model accuracy: ', base_model_accuracy)
+    print('Pruned test accuracy: ', model_for_pruning_accuracy)
 
     # Export the model
     model_for_export = tfmot.sparsity.keras.strip_pruning(model_for_pruning)
