@@ -83,6 +83,7 @@ def build_and_save_model(model_filename, dtype, train_images, train_labels, test
     print('\nTraining:')
     model.fit(train_images, train_labels, epochs=10)
 
+    # Evaluation
     test_loss, test_acc = model.evaluate(test_images,  test_labels, verbose=2)
     print('\nTest accuracy:', test_acc)
 
@@ -107,9 +108,7 @@ def predict(model_filename, train_images, train_labels, test_images, test_labels
 
 
 if __name__ == '__main__':
-    parser = argparse.ArgumentParser(
-        description="If it doesn't already exists, this scripts creates and train a small classifier for Fashion MNIST"
-    )
+    parser = argparse.ArgumentParser(description="If it doesn't already exists, this scripts creates and train a small classifier for Fashion MNIST")
     parser.add_argument(
         '-dt', '--data_type', action='store', type=str, choices={'float16', 'float32', 'float64'}, default='float32',
         help="A data type [float16 | float32 | float64]"
@@ -126,6 +125,7 @@ if __name__ == '__main__':
 
     # predict(model_filename, train[0], train[1], test[0], test[1])
 
+    # Evaluate model
     model = tf.keras.models.load_model(model_filename)
     model.compile(optimizer='adam',
                   loss=tf.keras.losses.SparseCategoricalCrossentropy(from_logits=True),
@@ -134,7 +134,6 @@ if __name__ == '__main__':
     _, base_model_accuracy = model.evaluate(test[0], test[1], verbose=2)
     t2 = time.time()
     time_base_model = t2 - t1
-
 
     # Pruning
     prune_low_magnitude = tfmot.sparsity.keras.prune_low_magnitude
