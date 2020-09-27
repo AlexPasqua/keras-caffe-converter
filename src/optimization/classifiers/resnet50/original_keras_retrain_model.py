@@ -78,9 +78,9 @@ early = EarlyStopping(monitor='val_acc', min_delta=0, patience=10, verbose=1, mo
 # Train the model
 model_final.fit_generator(
   train_generator,
-  steps_per_epoch = nb_train_samples,
+  ##steps_per_epoch = nb_train_samples,
   epochs = epochs,
   validation_data = validation_generator,
-  validation_steps = nb_validation_samples
+  #validation_steps = nb_validation_samples
   #callbacks = [checkpoint, early]
 )

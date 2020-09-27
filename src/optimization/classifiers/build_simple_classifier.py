@@ -130,10 +130,10 @@ if __name__ == '__main__':
     model.compile(optimizer='adam',
                   loss=tf.keras.losses.SparseCategoricalCrossentropy(from_logits=True),
                   metrics=['accuracy'])
-    t1 = time.time()
+    """t1 = time.time()
     _, base_model_accuracy = model.evaluate(test[0], test[1], verbose=2)
     t2 = time.time()
-    time_base_model = t2 - t1
+    time_base_model = t2 - t1"""
 
     # Pruning
     prune_low_magnitude = tfmot.sparsity.keras.prune_low_magnitude
@@ -167,6 +167,10 @@ if __name__ == '__main__':
     _, model_for_pruning_accuracy = model_for_pruning.evaluate(test[0], test[1], verbose=0)
     t2 = time.time()
     time_pruned_model = t2 - t1
+    t1 = time.time()
+    _, base_model_accuracy = model.evaluate(test[0], test[1], verbose=2)
+    t2 = time.time()
+    time_base_model = t2 - t1
     print('\n\nBase model accuracy: ', base_model_accuracy)
     print('Pruned test accuracy: ', model_for_pruning_accuracy)
     print(f'Base model evaluation time: {time_base_model}\nPruned model evaluation time: {time_pruned_model}')
