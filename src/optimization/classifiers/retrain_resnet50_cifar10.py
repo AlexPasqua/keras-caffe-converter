@@ -3,11 +3,14 @@ from tensorflow import keras
 from tensorflow.keras import applications
 from tensorflow.keras import layers
 from tensorflow.keras.layers import Dense
-from tensorflow.keras.models import Sequential, Model
+from tensorflow.keras.models import Sequential, Model, load_model
 from tensorflow.keras import optimizers
 
 import numpy as np
+import argparse
 
+
+model_path = '../../../models/resnet50_retrained_cifar10.h5'
 
 img_width = img_height = 200
 num_classes = 10
@@ -30,29 +33,44 @@ print(test_imgs.shape[0], 'test samples')
 print('train_lbls shape:', train_lbls.shape)
 
 
-resnet = applications.ResNet50(include_top=False, weights='imagenet', input_shape=(img_width, img_height, 3))
+def create():
+    resnet = applications.ResNet50(include_top=False, weights='imagenet', input_shape=(img_width, img_height, 3))
 
-# Freeze the layers we don't want to train
-#for layer in resnet.layers[:]:
-#    layer.trainable = False
+    # Freeze the layers we don't want to train
+    #for layer in resnet.layers[:]:
+    #    layer.trainable = False
 
-model = Sequential()
-model.add(layers.UpSampling2D((2,2)))
-model.add(layers.UpSampling2D((2,2)))
-model.add(layers.UpSampling2D((2,2)))
-model.add(resnet)
-model.add(layers.Flatten())
-model.add(layers.BatchNormalization())
-model.add(layers.Dense(128, activation='relu'))
-model.add(layers.Dropout(0.5))
-model.add(layers.BatchNormalization())
-model.add(layers.Dense(64, activation='relu'))
-model.add(layers.Dropout(0.5))
-model.add(layers.BatchNormalization())
-model.add(layers.Dense(10, activation='softmax'))
+    model = Sequential()
+    model.add(layers.UpSampling2D((2,2)))
+    model.add(layers.UpSampling2D((2,2)))
+    model.add(layers.UpSampling2D((2,2)))
+    model.add(resnet)
+    model.add(layers.Flatten())
+    model.add(layers.BatchNormalization())
+    model.add(layers.Dense(128, activation='relu'))
+    model.add(layers.Dropout(0.5))
+    model.add(layers.BatchNormalization())
+    model.add(layers.Dense(64, activation='relu'))
+    model.add(layers.Dropout(0.5))
+    model.add(layers.BatchNormalization())
+    model.add(layers.Dense(10, activation='softmax'))
 
-model.compile(optimizer=optimizers.RMSprop(lr=2e-5), loss='binary_crossentropy', metrics=['acc'])
+    model.compile(optimizer=optimizers.RMSprop(lr=2e-5), loss='binary_crossentropy', metrics=['acc'])
 
-history = model.fit(train_imgs, train_lbls, epochs=5, batch_size=20, validation_data=(test_imgs, test_lbls), use_multiprocessing=True)
+    history = model.fit(train_imgs, train_lbls, epochs=5, batch_size=20, validation_data=(test_imgs, test_lbls), use_multiprocessing=True)
 
-model.save('../../../models/resnet50_retrained_cifar10.h5')
+    model.save(model_path)
+
+
+def evaluate():
+    model = load_model(model_path)
+    model.compile(optimizer=optimizers.RMSprop(lr=2e-5), loss='binary_crossentropy', metrics=['acc'])
+    model.evaluate(test_imgs, test_lbls, batch_size=20)
+
+
+if __name__ == '__main__':
+    parser = argparse.ArgumentParser(description="This script either creates and train a ResNet50 for CIFAR10 or it evaluates that model (if already existing)")
+    parser.add_argument('-m', '--mode', action='store', type=str, choices={'create', 'evaluate'}, default='create', help='Mode')
+    args = parser.parse_args()
+    if args.mode == 'create': create()
+    else: evaluate()
