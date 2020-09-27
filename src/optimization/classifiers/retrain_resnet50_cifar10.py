@@ -66,6 +66,9 @@ def evaluate():
     model = load_model(model_path)
     model.compile(optimizer=optimizers.RMSprop(lr=2e-5), loss='binary_crossentropy', metrics=['acc'])
     model.evaluate(test_imgs, test_lbls, batch_size=20)
+    # Single prediction
+    # print(f'Predicted class: {np.argmax(model.predict(test_imgs[0][np.newaxis, ...]))}')
+    # print(f'Actual class: {np.argmax(test_lbls[0])}')
 
 
 if __name__ == '__main__':
