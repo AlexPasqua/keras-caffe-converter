@@ -32,6 +32,10 @@ print('train_lbls shape:', train_lbls.shape)
 
 resnet = applications.ResNet50(include_top=False, weights='imagenet', input_shape=(img_width, img_height, 3))
 
+# Freeze the layers we don't want to train
+#for layer in resnet.layers[:]:
+#    layer.trainable = False
+
 model = Sequential()
 model.add(layers.UpSampling2D((2,2)))
 model.add(layers.UpSampling2D((2,2)))
@@ -49,25 +53,6 @@ model.add(layers.Dense(10, activation='softmax'))
 
 model.compile(optimizer=optimizers.RMSprop(lr=2e-5), loss='binary_crossentropy', metrics=['acc'])
 
-history = model.fit(train_imgs, train_lbls, epochs=5, batch_size=20, validation_data=(test_imgs, test_lbls))
+history = model.fit(train_imgs, train_lbls, epochs=5, batch_size=20, validation_data=(test_imgs, test_lbls), use_multiprocessing=True)
 
-
-
-# Freeze the layers which you don't want to train. Here I am freezing the all layers.
-#for layer in resnet.layers[:]:
-    #layer.trainable = False
-
-
-# complete the model to be used with cifar10
-"""out = resnet.output
-pred = Dense(1000)(out)
-pred = Dense(100)(pred)
-pred = Dense(10, activation='softmax', name='pred')(pred)
-model = Model(inputs=resnet.input, outputs=pred)
-model.summary()
-
-# compile the model
-model.compile(loss="sparse_categorical_crossentropy", optimizer=optimizers.SGD(), metrics=["accuracy"])
-
-# train the model
-model.fit(train_imgs, train_lbls, epochs=2, verbose=1, validation_split=0.1)"""
+model.save('../../../models/resnet50_retrained_cifar10.h5')
