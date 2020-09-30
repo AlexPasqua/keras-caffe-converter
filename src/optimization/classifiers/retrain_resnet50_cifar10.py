@@ -14,7 +14,7 @@ import time
 
 model_path = '../../../models/resnet50_retrained_cifar10.h5'
 
-img_width = img_height = 200
+img_width = img_height = 32
 num_classes = 10
 
 (train_imgs, train_lbls), (test_imgs, test_lbls) = tf.keras.datasets.cifar10.load_data()
@@ -42,6 +42,7 @@ def create():
     #for layer in resnet.layers[:]:
     #    layer.trainable = False
 
+
     inp = resnet.input
     out = layers.Flatten()(resnet.output)
     out = layers.BatchNormalization()(out)
@@ -52,8 +53,10 @@ def create():
     out = layers.Dropout(0.5)(out)
     out = layers.BatchNormalization()(out)
     out = layers.Dense(10, activation='softmax')(out)
+
     model = Model(inp, out)
     model.summary()
+
 
     """model = Sequential()
     model.add(layers.UpSampling2D((2,2)))
@@ -68,13 +71,13 @@ def create():
     model.add(layers.Dense(64, activation='relu'))
     model.add(layers.Dropout(0.5))
     model.add(layers.BatchNormalization())
-    model.add(layers.Dense(10, activation='softmax'))
+    model.add(layers.Dense(10, activation='softmax'))"""
 
     model.compile(optimizer=optimizers.RMSprop(lr=2e-5), loss='binary_crossentropy', metrics=['acc'])
 
-    history = model.fit(train_imgs, train_lbls, epochs=5, batch_size=20, validation_data=(test_imgs, test_lbls), use_multiprocessing=True)
+    history = model.fit(train_imgs, train_lbls, epochs=20, batch_size=20, validation_data=(test_imgs, test_lbls), use_multiprocessing=True)
 
-    model.save(model_path)"""
+    model.save(model_path)
 
 
 def evaluate():
@@ -89,12 +92,13 @@ def evaluate():
 def apply_pruning(layer):
     prune_low_magnitude = tfmot.sparsity.keras.prune_low_magnitude
     if isinstance(layer, tf.keras.layers.Conv2D) or isinstance(layer, tf.keras.layers.Dense):
-        return prune_low_magnitude(layer)
+        return prune_low_magnitude(layer, pruning_schedule=tfmot.sparsity.keras.ConstantSparsity(0.5, 0))
     return layer
 
 
 def prune():
     model = load_model(model_path)
+    model.compile(optimizer=optimizers.RMSprop(lr=2e-5), loss='binary_crossentropy', metrics=['acc'])
     prune_low_magnitude = tfmot.sparsity.keras.prune_low_magnitude
     num_images = train_imgs.shape[0]
     epochs = 1
@@ -118,9 +122,6 @@ def prune():
                       validation_data=(test_imgs, test_lbls),
                       callbacks=[tfmot.sparsity.keras.UpdatePruningStep()]
     )
-    #pruned_model.evaluate(test_imgs, test_lbls, batch_size=batch_size)
-    pruned_model = tfmot.sparsity.keras.strip_pruning(pruned_model)
-    pruned_model.save('../../../models/resnet50_retrained_cifar10_pruned.h5')
 
     # test on evaluation time
     t1 = time.time()
@@ -128,12 +129,16 @@ def prune():
     t2 = time.time()
     base_model_eval_time = t2 - t1
     t1 = time.time()
-    pruned_model.compile(optimizer=optimizers.RMSprop(lr=2e-5), loss='binary_crossentropy', metrics=['acc'])
+    # pruned_model.compile(optimizer=optimizers.RMSprop(lr=2e-5), loss='binary_crossentropy', metrics=['acc'])
     _, pruned_acc = pruned_model.evaluate(test_imgs, test_lbls, batch_size=batch_size)
     t2 = time.time()
     pruned_model_eval_time = t2 - t1
-    print(f'Base model accuracy: {base_acc}\nBase model evaluation time: {base_model_eval_time}\n')
-    print(f'Pruned model accuracy: {pruned_acc}\nPruned model evaluation time: {pruned_model_eval_time}')
+    print(f'Base model accuracy: {base_acc}\nPruned model accuracy: {pruned_acc}\n')
+    print(f'Base model evaluation time: {base_model_eval_time}\nPruned model evaluation time: {pruned_model_eval_time}')
+
+    #pruned_model.evaluate(test_imgs, test_lbls, batch_size=batch_size)
+    pruned_model = tfmot.sparsity.keras.strip_pruning(pruned_model)
+    pruned_model.save('../../../models/resnet50_retrained_cifar10_pruned.h5')
 
 
 if __name__ == '__main__':
