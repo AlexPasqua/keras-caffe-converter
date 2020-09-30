@@ -66,6 +66,13 @@ def load_images(dtype):
 
 
 def build_and_save_model(model_filename, dtype, train_images, train_labels, test_images, test_labels):
+    """
+    Build, compile, fit, evaluate and save model
+    Arguments:
+        model_filename: the path to the model
+        dtype: a string indicatind the data type (float16 | float32 | float64)
+        train_images, train_labels, test_images, test_labels: the dataset as return by 'load_images'
+    """
     # Build model
     tf.keras.backend.set_floatx(dtype)
     model = keras.Sequential([
@@ -96,6 +103,9 @@ def build_and_save_model(model_filename, dtype, train_images, train_labels, test
 
 
 def predict(model_filename, train_images, train_labels, test_images, test_labels):
+    """
+    Load a model and perform a single prediction
+    """
     model = tf.keras.models.load_model(model_filename)
     start_time = time.time()
     predictions = model.predict(train_images)
@@ -104,6 +114,11 @@ def predict(model_filename, train_images, train_labels, test_images, test_labels
 
 
 def prune(model, train_images, train_labels):
+    """
+    Prune the model
+    Arguments:
+        model: the base model to prune (Keras' Model object)
+    """
     prune_low_magnitude = tfmot.sparsity.keras.prune_low_magnitude
     batch_size = 128
     epochs = 2
@@ -111,6 +126,7 @@ def prune(model, train_images, train_labels):
     num_images = train_images.shape[0] * (1 - validation_split)
     end_step = np.ceil(num_images / batch_size).astype(np.int32) * epochs
 
+    # Define the pruning chedule (and eventaully other pruning parameters)
     pruning_params = {
         'pruning_schedule': tfmot.sparsity.keras.PolynomialDecay(initial_sparsity=0.50,
                                                                  final_sparsity=0.80,
@@ -119,13 +135,17 @@ def prune(model, train_images, train_labels):
     }
     # Alternative pruning schedule: ConstantSparsity
     # pruning_params = {'pruning_schedule': tfmot.sparsity.keras.ConstantSparsity(0.8, 0)}
+
+    # Get a 'Pruneble Model' from the base model
     model_for_pruning = prune_low_magnitude(model, **pruning_params)
     model_for_pruning.compile(optimizer='adam',
               loss=tf.keras.losses.SparseCategoricalCrossentropy(from_logits=True),
               metrics=['accuracy'])
 
+    # Callbacks for training. UpdatePruningStep() is necessary for pruning
     callbacks = [tfmot.sparsity.keras.UpdatePruningStep()]
 
+    # Training with pruning callbacks
     model_for_pruning.fit(train_images, train_labels,
                           batch_size=batch_size,
                           epochs=epochs,
@@ -151,6 +171,7 @@ if __name__ == '__main__':
     if not os.path.exists(model_filename):
         build_and_save_model(model_filename, args.data_type, train[0], train[1], test[0], test[1])
 
+    # Load and compile model
     model = tf.keras.models.load_model(model_filename)
     model.compile(optimizer='adam',
                   loss=tf.keras.losses.SparseCategoricalCrossentropy(from_logits=True),
@@ -160,15 +181,13 @@ if __name__ == '__main__':
     model_for_pruning = prune(model, train[0], train[1])
 
     # comparison between base model and pruned model
-    t1 = time.time()
+    t = time.time()
     _, base_model_accuracy = model.evaluate(test[0], test[1], verbose=2)
-    t2 = time.time()
-    time_base_model = t2 - t1
+    time_base_model = time.time() - t
 
-    t1 = time.time()
+    t = time.time()
     _, model_for_pruning_accuracy = model_for_pruning.evaluate(test[0], test[1], verbose=0)
-    t2 = time.time()
-    time_pruned_model = t2 - t1
+    time_pruned_model = time.time() - t
 
     print('\n\nBase model accuracy: ', base_model_accuracy)
     print('Pruned test accuracy: ', model_for_pruning_accuracy)
