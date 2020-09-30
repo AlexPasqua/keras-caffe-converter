@@ -1,3 +1,7 @@
+"""
+Demo script to create a simple classifier for FashionMNIST and prune it
+"""
+
 import tensorflow as tf
 from tensorflow import keras
 import tensorflow_model_optimization as tfmot
@@ -97,14 +101,36 @@ def predict(model_filename, train_images, train_labels, test_images, test_labels
     predictions = model.predict(train_images)
     end_time = time.time()
     print(f"\nTime for prediction of {len(train_labels)} images: {end_time - start_time} seconds")
-    # index = 0
-    # print('\nResults:')
-    # for i in range(len(test_labels)):
-        # if predicted != actual...
-        # if np.argmax(predictions[i]) != test_labels[i]:
-        #    print("\nFound wrong prediction!")
-        #    print("Predicted: {:20s}\tActual: {:20s}".format(
-        #        class_names[ np.argmax(predictions[i]) ], class_names[test_labels[i]]))
+
+
+def prune(model, train_images, train_labels):
+    prune_low_magnitude = tfmot.sparsity.keras.prune_low_magnitude
+    batch_size = 128
+    epochs = 2
+    validation_split = 0.1
+    num_images = train_images.shape[0] * (1 - validation_split)
+    end_step = np.ceil(num_images / batch_size).astype(np.int32) * epochs
+
+    pruning_params = {
+        'pruning_schedule': tfmot.sparsity.keras.PolynomialDecay(initial_sparsity=0.50,
+                                                                 final_sparsity=0.80,
+                                                                 begin_step=0,
+                                                                 end_step=end_step)
+    }
+    model_for_pruning = prune_low_magnitude(model, **pruning_params)
+    model_for_pruning.compile(optimizer='adam',
+              loss=tf.keras.losses.SparseCategoricalCrossentropy(from_logits=True),
+              metrics=['accuracy'])
+
+    callbacks = [tfmot.sparsity.keras.UpdatePruningStep()]
+
+    model_for_pruning.fit(train_images, train_labels,
+                          batch_size=batch_size,
+                          epochs=epochs,
+                          validation_split=validation_split,
+                          callbacks=callbacks)
+
+    return model_for_pruning
 
 
 if __name__ == '__main__':
@@ -123,46 +149,15 @@ if __name__ == '__main__':
     if not os.path.exists(model_filename):
         build_and_save_model(model_filename, args.data_type, train[0], train[1], test[0], test[1])
 
-    # predict(model_filename, train[0], train[1], test[0], test[1])
-
-    # Evaluate model
     model = tf.keras.models.load_model(model_filename)
     model.compile(optimizer='adam',
                   loss=tf.keras.losses.SparseCategoricalCrossentropy(from_logits=True),
                   metrics=['accuracy'])
-    """t1 = time.time()
-    _, base_model_accuracy = model.evaluate(test[0], test[1], verbose=2)
-    t2 = time.time()
-    time_base_model = t2 - t1"""
 
     # Pruning
-    prune_low_magnitude = tfmot.sparsity.keras.prune_low_magnitude
-    batch_size = 128
-    epochs = 2
-    validation_split = 0.1
-    num_images = train[0].shape[0] * (1 - validation_split)
-    end_step = np.ceil(num_images / batch_size).astype(np.int32) * epochs
+    model_for_pruning = prune(model, train[0], train[1])
 
-    pruning_params = {
-        'pruning_schedule': tfmot.sparsity.keras.PolynomialDecay(initial_sparsity=0.50,
-                                                                 final_sparsity=0.80,
-                                                                 begin_step=0,
-                                                                 end_step=end_step)
-    }
-    model_for_pruning = prune_low_magnitude(model, **pruning_params)
-    model_for_pruning.compile(optimizer='adam',
-              loss=tf.keras.losses.SparseCategoricalCrossentropy(from_logits=True),
-              metrics=['accuracy'])
-
-    # model_for_pruning.summary()
-    callbacks = [tfmot.sparsity.keras.UpdatePruningStep()]
-
-    model_for_pruning.fit(train[0], train[1],
-                          batch_size=batch_size,
-                          epochs=epochs,
-                          validation_split=validation_split,
-                          callbacks=callbacks)
-
+    # comparison between base model and pruned model
     t1 = time.time()
     _, model_for_pruning_accuracy = model_for_pruning.evaluate(test[0], test[1], verbose=0)
     t2 = time.time()
