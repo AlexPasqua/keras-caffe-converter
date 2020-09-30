@@ -42,7 +42,20 @@ def create():
     #for layer in resnet.layers[:]:
     #    layer.trainable = False
 
-    model = Sequential()
+    inp = resnet.input
+    out = layers.Flatten()(resnet.output)
+    out = layers.BatchNormalization()(out)
+    out = layers.Dense(128, activation='relu')(out)
+    out = layers.Dropout(0.5)(out)
+    out = layers.BatchNormalization()(out)
+    out = layers.Dense(64, activation='relu')(out)
+    out = layers.Dropout(0.5)(out)
+    out = layers.BatchNormalization()(out)
+    out = layers.Dense(10, activation='softmax')(out)
+    model = Model(inp, out)
+    model.summary()
+
+    """model = Sequential()
     model.add(layers.UpSampling2D((2,2)))
     model.add(layers.UpSampling2D((2,2)))
     model.add(layers.UpSampling2D((2,2)))
@@ -61,7 +74,7 @@ def create():
 
     history = model.fit(train_imgs, train_lbls, epochs=5, batch_size=20, validation_data=(test_imgs, test_lbls), use_multiprocessing=True)
 
-    model.save(model_path)
+    model.save(model_path)"""
 
 
 def evaluate():
