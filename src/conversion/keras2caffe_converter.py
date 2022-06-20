@@ -19,7 +19,7 @@ def keras2caffe(keras_model_path, output_dir, prototxt_path, caffemodel_name):
         keras_model_path: the path to the keras model
         output_dir: the directory where to save the caffemodel and the prototxt if necessary
         prototxt_path: the path to the prototxt (optional: if missing, a prototxt will be created)
-        caffemodel_name: The name (WITHOUT extension) of the file where to save the Caffe model
+        caffemodel_name: The name (without extension) of the file where to save the Caffe model
     """
 
     output_dir = output_dir + ('/' if output_dir[-1] != '/' else '')
@@ -42,8 +42,8 @@ def keras2caffe(keras_model_path, output_dir, prototxt_path, caffemodel_name):
 if __name__ == '__main__':
     parser = argparse.ArgumentParser(description="Reads the Keras model and create an equivalent Caffe one")
     parser.add_argument('keras_model', action='store', help="The filename (full path including extension) of the file that contains the Keras model.")
-    parser.add_argument('output_dir', action='store', help="The path to the output directory where to save th caffemodel (and prototxt if necessary)")
-    parser.add_argument('--caffemodel_name', action='store', help="The name (WITHOUT extension) of the file where to save the Caffe model")
+    parser.add_argument('output_dir', action='store', help="The path to the output directory where to save the caffemodel (and prototxt if necessary)")
+    parser.add_argument('--caffemodel_name', action='store', help="The name (without extension) of the file where to save the Caffe model")
     parser.add_argument('--prototxt', action='store', help="The filename (full path including file extension) of the '.prototxt' file that defines the Caffe model.")
     args = parser.parse_args()
     keras2caffe(args.keras_model, args.output_dir, args.prototxt, args.caffemodel_name)
